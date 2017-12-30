@@ -1,0 +1,119 @@
+# --------- importing packages --------- 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+# from ggplot import *    # requires a pip install
+%matplotlib inline
+
+
+# --------- Sample dataframe to be used as an example in plotting  --------- 
+
+df = pd.DataFrame()   # initialize an empty dataframe
+df['feature_x'] = np.arange(-10, 10)             # to be plotted in x-dimension
+df['feature_y'] = np.arange(-20, 20, 2)
+df['feature_y'] = np.random.normal(size=20) # to be plotted in y-dimension
+df['feature_sz'] = df['feature_y'].copy()             # to represent size, when applicable
+#df['feature_szDec'] = np.arange(-.200, .040, 0.002)                                                # tracks with 'feature_y' column
+df['feature_c'] = df['feature_x'].copy()    # continuous variable; to represent color, when applicable
+                                                # tracks with 'feature_x' column
+    
+# categorical variable; to represent color in a classification context, tracks with x
+groupSize = round(len(df)/5)
+df['feature_cat'] = ['group 1']*groupSize + ['group 2']*groupSize + ['group 3']*groupSize + ['group 4']*groupSize + ['group 5']*(len(df)-groupSize*4)
+
+
+
+# --------- Scatter plot figure and legend representation ----------------
+
+# Show markers accurately representing the continuously varying values of the feature, but
+# only show a few size representations on the legend
+
+f, ax = plt.subplots(1,1);
+
+# -- make a sizes vector and add it to the dataframe ---
+szMaxMarker = 200
+df['sizes'] = 1+szMaxMarker*((df['feature_sz']-df['feature_sz'].min())/(df['feature_sz'].max()-df['feature_sz'].min()))
+
+# --- all for the legend - just pick number of points ---
+noLegendPoints = 5
+# these are the legend points, distributed through the size range
+legendPoints_ideal = np.linspace(df['feature_sz'].min(), df['feature_sz'].max(), noLegendPoints)
+# these are the dataframe rows that are closest to those legendPoints
+# dense  list comprehension to get the closest values in the dataset that are distributed
+legendPoints_data = [(df['feature_sz'].iloc[(df['feature_sz']-x).abs().argsort()[0]]) for x in legendPoints_ideal]
+# find the rows and make a new dataframe; underlay the plot and add that
+dfTemp = df[df['feature_sz'].isin(legendPoints_data)]
+for i, data in dfTemp.iterrows():
+    # Set the color to white so it's the same as the background. It is plotted before all the data intended to be visible
+    # so it will be underrneath that layer.
+    ax.scatter(data['feature_x'], data['feature_sz'], s=(data['sizes']), c='w', label=str(data['feature_sz']))
+
+# --- place the legend which should only show for the underlaying plot ---
+first_legend = ax.legend(title='feature_sz', loc='upper left', bbox_to_anchor=(1,1))
+# manually set the colors of the marker legends to black
+for i in range(len(first_legend.legendHandles)):
+     first_legend.legendHandles[i].set_color('black')
+
+# Add first legend manually to the current Axes.
+plt.gca().add_artist(first_legend)        
+    
+# --- actual data; make label=None so that it doesn't over-ride the custom plot for the legend ---
+    
+# colors for categorical variables  
+colors=['gray', 'blue', 'green', 'yellow', 'red']
+
+# ax.scatter(df['feature_x'], df['feature_y'], s=df['sizes'], color='k', label=None) #, color='k', 
+
+for ind,data in enumerate(df['feature_cat'].unique()):
+    dfTemp = df[df['feature_cat']==data]
+    ax.scatter(x=dfTemp['feature_x'], y=dfTemp['feature_y'], s=dfTemp['sizes'], color=colors[ind], label=None)
+
+# re-plotting for the purposes of the class legend
+
+# dfTemp2 = pd.DataFrame()
+# for ind,data in enumerate(df['feature_cat'].unique()):
+#     # make a new dataframe that appends each row
+#     dfTemp2 = dfTemp2.append(df[df['feature_cat']==data].iloc[0,:], ignore_index=True)   # getting the first example from each class
+
+# for i, data in dfTemp2.iterrows():
+#     ax.scatter(data['feature_x'], data['feature_sz'], c='w', label=str(data['feature_cat']))
+     
+# second_legend = plt.legend(title='groups', loc='upper left', bbox_to_anchor=(1,0.5))
+# for i in range(len(second_legend.legendHandles)):
+#      second_legend.legendHandles[i].set_color('black')
+        
+
+# Create a legend for the second plot
+    # Create artist specifically for adding to the legend
+    # https://matplotlib.org/users/legend_guide.html
+#second_legend = plt.legend(handles=[colorPlot2], loc=2, title='blue')
+
+
+# Add second legend specific to the colors of the groups
+# import matplotlib.patches as mpatches
+# group_patches = []
+# for i in enumerate(colors):
+#     group_patches[i] = mpatches.Patch(color=colors[i], label=df['feature_cat'].unique()[i])
+# colors=['red']
+
+# using mpatches for automating a second legend
+
+# test = [mpatches.Patch(color='red', label='red data'), mpatches.Patch(color='blue', label='blue data')]
+# definining hatch is a hard exercise
+# hard to do a group
+# red_patch = mpatches.Patch(color='red', label='red data')
+# blue_patch = mpatches.Patch(color='blue', label='blue data')
+# group_patches = [red_patch, blue_patch]
+# plt.legend(handles=group_patches, loc='upper left', bbox_to_anchor=(1,0.5))
+
+import matplotlib.patches as mpatches
+groups = df['feature_cat'].unique().tolist()
+group_patches = list()
+for i,data in enumerate(groups):
+    #print(i, data, groups[i])
+    group_patches.append(mpatches.Patch(color=colors[i], label=data))
+
+# changed the handlelength parameter to 0.7 to get square-shaped colored boxes in the legend    
+ax.legend(handles=group_patches, title='group', loc='upper left', bbox_to_anchor=(1,0.5), handlelength=0.7)
+
